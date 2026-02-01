@@ -1,6 +1,5 @@
 package ua.markiyan.sonara.dto.response;
 
-import java.util.List;
 
 public record ArtistResponse (
         Long id,

@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/users/{userId}/playlists")
 @RequiredArgsConstructor
-public class PlaylistController {
+public class UserPlaylistController {
 
     private final PlaylistService playlistService;
     private final PlaylistModelAssembler assembler;
@@ -29,7 +29,7 @@ public class PlaylistController {
         List<PlaylistResponse> list = playlistService.listByUser(userId);
         var models = list.stream().map(assembler::toModel).collect(Collectors.toList());
         return CollectionModel.of(models,
-                WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(PlaylistController.class).list(userId)).withSelfRel());
+                WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserPlaylistController.class).list(userId)).withSelfRel());
     }
 
     @PostMapping

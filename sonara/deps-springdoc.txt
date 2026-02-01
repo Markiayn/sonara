@@ -1,0 +1,4 @@
+ua.markiyan:sonara:jar:0.0.1-SNAPSHOT
+\- org.springdoc:springdoc-openapi-starter-webmvc-ui:jar:2.1.0:compile
+   \- org.springdoc:springdoc-openapi-starter-webmvc-api:jar:2.1.0:compile
+      \- org.springdoc:springdoc-openapi-starter-common:jar:2.1.0:compile
