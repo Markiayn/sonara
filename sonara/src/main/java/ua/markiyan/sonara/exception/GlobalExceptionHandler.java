@@ -1,27 +1,50 @@
 package ua.markiyan.sonara.exception;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import ua.markiyan.sonara.dto.response.ErrorResponse;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<?> handleNotFound(NotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("timestamp", Instant.now(), "error", ex.getMessage()));
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+
+        ex.getBindingResult().getFieldErrors().forEach(error -> {
+            errors.merge(
+                    error.getField(),
+                    error.getDefaultMessage(),
+                    (oldValue, newValue) -> oldValue + ", " + newValue // Склеюємо через кому
+            );
+        });
+
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation failed",
+                LocalDateTime.now(),
+                errors
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex) {
-        var errors = ex.getBindingResult().getFieldErrors().stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        e -> e.getField(), e -> e.getDefaultMessage(), (a,b) -> a
-                ));
-        return ResponseEntity.badRequest()
-                .body(Map.of("timestamp", Instant.now(), "errors", errors));
+    @ExceptionHandler(ResourceAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleResourceExists(ResourceAlreadyExistsException ex) {
+        Map<String, String> errors = Map.of(ex.getField(), ex.getMessage());
+
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Resource conflict",
+                LocalDateTime.now(),
+                errors
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 }

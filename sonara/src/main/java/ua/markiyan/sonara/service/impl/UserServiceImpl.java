@@ -9,6 +9,7 @@ import ua.markiyan.sonara.dto.request.UserUpdateRequest;
 import ua.markiyan.sonara.dto.response.UserResponse;
 import ua.markiyan.sonara.entity.User;
 import ua.markiyan.sonara.exception.NotFoundException;
+import ua.markiyan.sonara.exception.ResourceAlreadyExistsException;
 import ua.markiyan.sonara.mapper.UserMapper;
 import ua.markiyan.sonara.repository.UserRepository;
 import ua.markiyan.sonara.service.UserService;
@@ -23,8 +24,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse create(UserRequest req) {
-        if (repo.existsByNameIgnoreCase(req.name())) {
-            throw new IllegalArgumentException("User with the same name already exists");
+        if (repo.existsByEmailIgnoreCase(req.email())) {
+            throw new ResourceAlreadyExistsException("email", "Користувач з такою поштою вже існує");
         }
 
         // мапимо DTO в ентіті
