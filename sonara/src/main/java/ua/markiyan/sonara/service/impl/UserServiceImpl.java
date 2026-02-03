@@ -25,14 +25,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse create(UserRequest req) {
         if (repo.existsByEmailIgnoreCase(req.email())) {
-            throw new ResourceAlreadyExistsException("email", "Користувач з такою поштою вже існує");
+            throw new ResourceAlreadyExistsException("email", "User with this email already exists");
         }
 
-        // мапимо DTO в ентіті
         User entity = UserMapper.toEntity(req);
-
-        // тут шифруємо пароль перед збереженням
         entity.setPasswordHash(encoder.encode(req.password()));
+
+        // Просто завжди ставимо роль за замовчуванням для нових реєстрацій
+        entity.setRole(User.Role.ROLE_USER);
 
         User saved = repo.save(entity);
         return UserMapper.toResponse(saved);

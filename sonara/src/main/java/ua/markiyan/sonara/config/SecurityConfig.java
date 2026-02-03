@@ -39,22 +39,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Вимикаємо CSRF через лямбду (сучасний стиль)
                 .csrf(csrf -> csrf.disable())
-
-                // Налаштовуємо сесії як STATELESS
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-
-                // Правила доступу
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll() // Реєстрація відкрита
-                        .requestMatchers("/api/auth/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
-                        .anyRequest().authenticated() // Все інше зачинено
-                )
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
 
-                // Твій JWT фільтр
+                        // ПРИКЛАДИ ОБМЕЖЕНЬ:
+                        .requestMatchers(HttpMethod.POST, "/api/artists/**").hasAnyRole("ARTIST", "ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/swagger-ui/**").hasAnyRole("ADMIN")
+
+                        .anyRequest().authenticated()
+                )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
