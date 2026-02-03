@@ -10,5 +10,4 @@ public record TrackRequest (
         @NotNull Boolean explicitFlag,
         @NotNull Long albumId,
         @NotNull Long artistId
-        //TODO album & artist
 ){}

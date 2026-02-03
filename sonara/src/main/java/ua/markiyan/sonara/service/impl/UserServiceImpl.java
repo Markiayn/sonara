@@ -9,6 +9,7 @@ import ua.markiyan.sonara.dto.request.UserUpdateRequest;
 import ua.markiyan.sonara.dto.response.UserResponse;
 import ua.markiyan.sonara.entity.User;
 import ua.markiyan.sonara.exception.NotFoundException;
+import ua.markiyan.sonara.exception.ResourceAlreadyExistsException;
 import ua.markiyan.sonara.mapper.UserMapper;
 import ua.markiyan.sonara.repository.UserRepository;
 import ua.markiyan.sonara.service.UserService;
@@ -23,15 +24,15 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse create(UserRequest req) {
-        if (repo.existsByNameIgnoreCase(req.name())) {
-            throw new IllegalArgumentException("User with the same name already exists");
+        if (repo.existsByEmailIgnoreCase(req.email())) {
+            throw new ResourceAlreadyExistsException("email", "User with this email already exists");
         }
 
-        // мапимо DTO в ентіті
         User entity = UserMapper.toEntity(req);
-
-        // тут шифруємо пароль перед збереженням
         entity.setPasswordHash(encoder.encode(req.password()));
+
+        // Просто завжди ставимо роль за замовчуванням для нових реєстрацій
+        entity.setRole(User.Role.ROLE_USER);
 
         User saved = repo.save(entity);
         return UserMapper.toResponse(saved);
@@ -77,10 +78,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public UserResponse findByEmail(String email) {
-        User u = repo.findAll().stream()
-                .filter(x -> x.getEmail() != null && x.getEmail().equalsIgnoreCase(email))
-                .findFirst()
+        // Репозиторій повертає Optional<User>, тому просто викликаємо orElseThrow
+        User u = repo.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NotFoundException("User with email %s not found".formatted(email)));
+
         return UserMapper.toResponse(u);
     }
 }

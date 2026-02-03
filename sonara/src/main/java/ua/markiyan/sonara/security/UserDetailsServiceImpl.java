@@ -17,19 +17,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository repo;
 
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // fallback to scanning all users if repository method isn't resolved by tooling
-        User u = repo.findAll().stream()
-                .filter(x -> x.getEmail() != null && x.getEmail().equalsIgnoreCase(username))
-                .findFirst()
+        // Використовуємо нормальний пошук
+        User u = repo.findByEmailIgnoreCase(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User %s not found".formatted(username)));
+
         return org.springframework.security.core.userdetails.User.withUsername(u.getEmail())
                 .password(u.getPasswordHash())
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_USER")))
-                .accountExpired(false)
-                .accountLocked(false)
-                .credentialsExpired(false)
+                // ТЕПЕР БЕРЕМО РОЛЬ З БАЗИ:
+                .authorities(new SimpleGrantedAuthority(u.getRole().name()))
                 .disabled(u.getStatus() != User.Status.ACTIVE)
                 .build();
     }

@@ -25,10 +25,26 @@ public class AuthController {
         try {
             String email = req.get("email");
             String password = req.get("password");
+
+            // 1. Спрінг перевіряє пароль
             authManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+
+            // 2. Дістаємо дані користувача (включаючи нове поле role)
             var user = userService.findByEmail(email);
-            String token = jwtUtil.generateToken(user.email(), Map.of("userId", user.id()));
-            return ResponseEntity.ok(Map.of("token", token));
+
+            // 3. Додаємо роль у токен разом із userId
+            Map<String, Object> extraClaims = Map.of(
+                    "userId", user.id(),
+                    "role", user.role() // Тепер роль їде всередині JWT!
+            );
+
+            String token = jwtUtil.generateToken(user.email(), extraClaims);
+
+            // 4. Повертаємо токен (можна ще й роль окремо для зручності фронта)
+            return ResponseEntity.ok(Map.of(
+                    "token", token,
+                    "role", user.role()
+            ));
         } catch (AuthenticationException ex) {
             return ResponseEntity.status(401).build();
         }

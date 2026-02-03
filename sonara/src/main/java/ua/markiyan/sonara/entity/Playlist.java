@@ -34,7 +34,7 @@ public class Playlist {
     private boolean isPublic = false;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "playlist", cascade = CascadeType.ALL, orphanRemoval = true)

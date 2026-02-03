@@ -23,7 +23,8 @@ public final class UserMapper {
                 e.getName(),
                 e.getCountry(),
                 e.getStatus().name(),
-                e.getCreatedAt().toString()
+                e.getCreatedAt().toString(),
+                e.getRole().name()
         );
     }
 }

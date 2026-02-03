@@ -9,6 +9,7 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 public class SonaraSpotifyCloneApplication {
 
 	public static void main(String[] args) {
+		java.util.Locale.setDefault(java.util.Locale.ENGLISH);
 		SpringApplication.run(SonaraSpotifyCloneApplication.class, args);
 	}
 

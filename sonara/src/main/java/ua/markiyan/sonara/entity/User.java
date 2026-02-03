@@ -14,7 +14,7 @@ import lombok.*;
 
 @Entity
 @Table(
-        name = "User",
+        name = "Users",
         uniqueConstraints = @UniqueConstraint(name = "uq_user_email", columnNames = "email")
 )
 public class User {
@@ -36,13 +36,18 @@ public class User {
     private String country;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Status status = Status.ACTIVE;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private Role role = Role.ROLE_USER;
 
     // Relations
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -57,5 +62,11 @@ public class User {
     // внутрішній enum для статусів
     public enum Status {
         ACTIVE, INACTIVE, SUSPENDED, DELETED, BANNED
+    }
+
+    public enum Role {
+        ROLE_USER,
+        ROLE_ARTIST,
+        ROLE_ADMIN
     }
 }
