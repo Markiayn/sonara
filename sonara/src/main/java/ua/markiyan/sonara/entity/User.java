@@ -36,7 +36,7 @@ public class User {
     private String country;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Builder.Default

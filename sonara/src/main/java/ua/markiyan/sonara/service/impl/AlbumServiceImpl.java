@@ -10,6 +10,7 @@ import ua.markiyan.sonara.dto.response.AlbumResponse;
 import ua.markiyan.sonara.entity.Album;
 import ua.markiyan.sonara.entity.Artist;
 import ua.markiyan.sonara.exception.NotFoundException;
+import ua.markiyan.sonara.exception.ResourceAlreadyExistsException;
 import ua.markiyan.sonara.mapper.AlbumMapper;
 import ua.markiyan.sonara.repository.AlbumRepository;
 import ua.markiyan.sonara.repository.ArtistRepository;
@@ -31,7 +32,7 @@ public class AlbumServiceImpl implements AlbumService {
                 .orElseThrow(() -> new NotFoundException("Artist %d not found".formatted(req.artistId())));
 
         if (albumRepo.existsByTitleIgnoreCaseAndArtist_Id(req.title(), req.artistId())) {
-            throw new IllegalArgumentException("Album with the same title already exists for this artist");
+            throw new ResourceAlreadyExistsException("title", "Album with the same title already exists for this artist");
         }
 
         Album entity = AlbumMapper.toEntity(req, artist);
@@ -75,7 +76,7 @@ public class AlbumServiceImpl implements AlbumService {
                 .orElseThrow(() -> new NotFoundException("Artist %d not found".formatted(artistId)));
 
         if (albumRepo.existsByTitleIgnoreCaseAndArtist_Id(req.title(), artistId)) {
-            throw new IllegalArgumentException("Album with the same title already exists for this artist");
+            throw new ResourceAlreadyExistsException("title", "Album with the same title already exists for this artist");
         }
 
         Album album = AlbumMapper.toEntity(req, artist);
@@ -116,9 +117,14 @@ public class AlbumServiceImpl implements AlbumService {
         Album a = albumRepo.findById(id)
                 .orElseThrow(() -> new NotFoundException("Album %d not found".formatted(id)));
 
-        if (req.title() != null && !req.title().isBlank()) a.setTitle(req.title());
-        if (req.releaseDate() != null) a.setReleaseDate(req.releaseDate());
-        if (req.coverUrl() != null) a.setCoverUrl(req.coverUrl());
+        if (req.title() != null && !req.title().isBlank()) {
+            // Додай перевірку, щоб не було дублікатів при оновленні
+            if (!a.getTitle().equalsIgnoreCase(req.title()) &&
+                    albumRepo.existsByTitleIgnoreCaseAndArtist_Id(req.title(), a.getArtist().getId())) {
+                throw new ResourceAlreadyExistsException("title", "Another album with this title already exists");
+            }
+            a.setTitle(req.title());
+        }
 
         Album saved = albumRepo.save(a);
         return AlbumMapper.toResponse(saved);

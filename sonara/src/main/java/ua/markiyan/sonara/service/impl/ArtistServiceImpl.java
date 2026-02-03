@@ -10,6 +10,7 @@ import ua.markiyan.sonara.dto.request.ArtistUpdateRequest;
 import ua.markiyan.sonara.dto.response.ArtistResponse;
 import ua.markiyan.sonara.entity.Artist;
 import ua.markiyan.sonara.exception.NotFoundException;
+import ua.markiyan.sonara.exception.ResourceAlreadyExistsException;
 import ua.markiyan.sonara.mapper.ArtistMapper;
 import ua.markiyan.sonara.repository.ArtistRepository;
 import ua.markiyan.sonara.service.ArtistService;
@@ -25,13 +26,9 @@ public class ArtistServiceImpl implements ArtistService {
     @Transactional
     public ArtistResponse create(ArtistRequest req) {
         if (repo.existsByNameIgnoreCase(req.name())) {
-            throw new IllegalArgumentException("Artist with the same name already exists");
+            throw new ResourceAlreadyExistsException("name", "Artist with the same name already exists");
         }
-
-        // мапимо DTO в ентіті
         Artist entity = ArtistMapper.toEntity(req);
-
-
         Artist saved = repo.save(entity);
         return ArtistMapper.toResponse(saved);
     }

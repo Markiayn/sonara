@@ -1,7 +1,6 @@
 package ua.markiyan.sonara.service.impl;
 
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +12,8 @@ import ua.markiyan.sonara.dto.response.TrackResponse;
 import ua.markiyan.sonara.entity.Album;
 import ua.markiyan.sonara.entity.Artist;
 import ua.markiyan.sonara.entity.Track;
+import ua.markiyan.sonara.exception.NotFoundException;
+import ua.markiyan.sonara.exception.ResourceAlreadyExistsException;
 import ua.markiyan.sonara.mapper.TrackMapper;
 import ua.markiyan.sonara.repository.AlbumRepository;
 import ua.markiyan.sonara.repository.ArtistRepository;
@@ -35,17 +36,17 @@ public class TrackServiceImpl implements TrackService {
     @Override
     @Transactional
     public TrackResponse create(TrackRequest req) {
-        // якщо лишаєш плоский варіант — перевірка глобальна або в межах артиста
-        // краще в межах артиста:
+
+// 1. Використовуємо твій NotFoundException замість EntityNotFoundException
         Artist artist = artistRepo.findById(req.artistId())
-                .orElseThrow(() -> new EntityNotFoundException("Artist not found: " + req.artistId()));
+                .orElseThrow(() -> new NotFoundException("Artist %d not found".formatted(req.artistId())));
 
         if (trackRepo.existsByTitleIgnoreCaseAndArtist_Id(req.title(), artist.getId())) {
-            throw new IllegalArgumentException("Track with the same title already exists for this artist");
+            throw new ResourceAlreadyExistsException("title", "Track with the same title already exists for this artist");
         }
 
         Album album = albumRepo.findById(req.albumId())
-                .orElseThrow(() -> new EntityNotFoundException("Album not found: " + req.albumId()));
+                .orElseThrow(() -> new NotFoundException("Album not found: " + req.albumId()));
 
         Track track = TrackMapper.toEntity(req, album, artist);
         track.setAudioUrl(generateAudioUrl(track.getAudioKey()));
@@ -58,7 +59,7 @@ public class TrackServiceImpl implements TrackService {
     public TrackResponse create(Long albumId, AlbumTrackRequest req) {
         // 1) Альбом
         Album album = albumRepo.findById(albumId)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Album not found: " + albumId));
+                .orElseThrow(() -> new NotFoundException("Album not found: " + albumId));
 
         // 2) Артист з альбому (FK)
         Artist artist = album.getArtist();
@@ -68,7 +69,7 @@ public class TrackServiceImpl implements TrackService {
 
         // 3) Перевірка дубля в межах артиста
         if (trackRepo.existsByTitleIgnoreCaseAndArtist_Id(req.title(), artist.getId())) {
-            throw new IllegalArgumentException("Track with the same title already exists for this artist");
+            throw new ResourceAlreadyExistsException("title", "Track with the same title already exists for this artist");
         }
 
         // 4) Збірка ентіті
@@ -88,13 +89,11 @@ public class TrackServiceImpl implements TrackService {
     }
 
 
-
-
     @Override
     @Transactional(readOnly = true)
     public TrackResponse get(Long id) {
         Track t = trackRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Track not found: " + id));
+                .orElseThrow(() -> new NotFoundException("Track not found: " + id));
         return TrackMapper.toResponse(t);
     }
 
@@ -105,9 +104,9 @@ public class TrackServiceImpl implements TrackService {
     @Transactional(readOnly = true)
     public List<TrackResponse> listByAlbumWithArtsit(Long artistId, Long albumId) {
         Album album = albumRepo.findById(albumId)
-                .orElseThrow(() -> new EntityNotFoundException("Album not found: " + albumId));
+                .orElseThrow(() -> new NotFoundException("Album not found: " + albumId));
         if (!album.getArtist().getId().equals(artistId)) {
-            throw new EntityNotFoundException("Album %d not found for artist %d".formatted(albumId, artistId));
+            throw new NotFoundException("Album %d not found for artist %d".formatted(albumId, artistId));
         }
 
         return trackRepo.findByAlbum_Id(albumId).stream()
@@ -119,14 +118,13 @@ public class TrackServiceImpl implements TrackService {
     @Transactional(readOnly = true)
     public TrackResponse getOne(Long artistId, Long albumId, Long trackId) {
         Album album = albumRepo.findById(albumId)
-                .orElseThrow(() -> new EntityNotFoundException("Album not found: " + albumId));
+                .orElseThrow(() -> new NotFoundException("Album not found: " + albumId));
         if (!album.getArtist().getId().equals(artistId)) {
-            throw new EntityNotFoundException("Album %d not found for artist %d".formatted(albumId, artistId));
+            throw new NotFoundException("Album %d not found for artist %d".formatted(albumId, artistId));
         }
 
         Track t = trackRepo.findByIdAndAlbum_Id(trackId, albumId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Track %d not found in album %d".formatted(trackId, albumId)));
+                .orElseThrow(() -> new NotFoundException("Track %d not found in album %d".formatted(trackId, albumId)));
         return TrackMapper.toResponse(t);
     }
 
@@ -134,14 +132,13 @@ public class TrackServiceImpl implements TrackService {
     @Transactional
     public TrackResponse createUnderAlbum(Long artistId, Long albumId, ArtistAlbumTrackRequest req) {
         var album = albumRepo.findById(albumId)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Album not found: " + albumId));
+                .orElseThrow(() -> new NotFoundException("Album not found: " + albumId));
         if (!album.getArtist().getId().equals(artistId)) {
-            throw new jakarta.persistence.EntityNotFoundException(
-                    "Album %d not found for artist %d".formatted(albumId, artistId));
+            throw new NotFoundException("Album %d not found for artist %d".formatted(albumId, artistId));
         }
 
         if (trackRepo.existsByTitleIgnoreCaseAndArtist_Id(req.title(), artistId)) {
-            throw new IllegalArgumentException("Track with the same title already exists for this artist");
+            throw new ResourceAlreadyExistsException("title", "Track with the same title already exists for this artist");
         }
 
         var artist = album.getArtist();
@@ -159,14 +156,16 @@ public class TrackServiceImpl implements TrackService {
         boolean he = explicitFlag != null;
 
         Page<Track> page;
-        if (ht && hd && he)       page = trackRepo.findByTitleContainingIgnoreCaseAndDurationSecAndExplicitFlag(title, durationSec, explicitFlag, pageable);
-        else if (ht && hd)        page = trackRepo.findByTitleContainingIgnoreCaseAndDurationSec(title, durationSec, pageable);
-        else if (ht && he)        page = trackRepo.findByTitleContainingIgnoreCaseAndExplicitFlag(title, explicitFlag, pageable);
-        else if (hd && he)        page = trackRepo.findByDurationSecAndExplicitFlag(durationSec, explicitFlag, pageable);
-        else if (ht)              page = trackRepo.findByTitleContainingIgnoreCase(title, pageable);
-        else if (hd)              page = trackRepo.findByDurationSec(durationSec, pageable);
-        else if (he)              page = trackRepo.findByExplicitFlag(explicitFlag, pageable);
-        else                      page = trackRepo.findAll(pageable);
+        if (ht && hd && he)
+            page = trackRepo.findByTitleContainingIgnoreCaseAndDurationSecAndExplicitFlag(title, durationSec, explicitFlag, pageable);
+        else if (ht && hd) page = trackRepo.findByTitleContainingIgnoreCaseAndDurationSec(title, durationSec, pageable);
+        else if (ht && he)
+            page = trackRepo.findByTitleContainingIgnoreCaseAndExplicitFlag(title, explicitFlag, pageable);
+        else if (hd && he) page = trackRepo.findByDurationSecAndExplicitFlag(durationSec, explicitFlag, pageable);
+        else if (ht) page = trackRepo.findByTitleContainingIgnoreCase(title, pageable);
+        else if (hd) page = trackRepo.findByDurationSec(durationSec, pageable);
+        else if (he) page = trackRepo.findByExplicitFlag(explicitFlag, pageable);
+        else page = trackRepo.findAll(pageable);
 
         return page.map(TrackMapper::toResponse);
     }
@@ -202,7 +201,6 @@ public class TrackServiceImpl implements TrackService {
     }
 
 
-
     @Override
     @Transactional(readOnly = true)
     public java.util.List<TrackResponse> listByAlbum(Long albumId) {
@@ -211,7 +209,6 @@ public class TrackServiceImpl implements TrackService {
                 .map(TrackMapper::toResponse)
                 .toList();
     }
-
 
 
     // ====== util ======
@@ -225,7 +222,7 @@ public class TrackServiceImpl implements TrackService {
     @Override
     @Transactional
     public TrackResponse update(Long id, TrackUpdateRequest req) {
-        Track t = trackRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Track not found: " + id));
+        Track t = trackRepo.findById(id).orElseThrow(() -> new NotFoundException("Track not found: " + id));
         if (req.title() != null && !req.title().isBlank()) t.setTitle(req.title());
         if (req.durationSec() != null) t.setDurationSec(req.durationSec());
         if (req.explicitFlag() != null) t.setExplicitFlag(req.explicitFlag());
@@ -241,7 +238,7 @@ public class TrackServiceImpl implements TrackService {
     @Override
     @Transactional
     public void delete(Long id) {
-        if (!trackRepo.existsById(id)) throw new EntityNotFoundException("Track not found: " + id);
+        if (!trackRepo.existsById(id)) throw new NotFoundException("Track not found: " + id);
         trackRepo.deleteById(id);
     }
 }
