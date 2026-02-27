@@ -77,9 +77,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public UserResponse findByEmail(String email) {
-        User u = repo.findAll().stream()
-                .filter(x -> x.getEmail() != null && x.getEmail().equalsIgnoreCase(email))
-                .findFirst()
+        User u = repo.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NotFoundException("User with email %s not found".formatted(email)));
         return UserMapper.toResponse(u);
     }
