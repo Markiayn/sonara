@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/BD_college.iml" filepath="$PROJECT_DIR$/.idea/BD_college.iml" />
-      <module fileurl="file://$PROJECT_DIR$/sonara/sonara.iml" filepath="$PROJECT_DIR$/sonara/sonara.iml" />
     </modules>
   </component>
 </project>
